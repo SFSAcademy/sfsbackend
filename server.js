@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 const mysql = require('mysql2');
 const bcrypt = require('bcrypt');
 
-const adminRoutes = require('./routes/admin');
+const adminRoutes = require('./routes/admin.js');
 
 const app = express();
 const port = process.env.PORT || 5000;
