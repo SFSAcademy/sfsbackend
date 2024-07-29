@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const authenticateJWT1 = require('../middlewares/authenticateJWT');
 const db = require('../config/db'); 
+require('dotenv').config();
 
 const router = express.Router();
 

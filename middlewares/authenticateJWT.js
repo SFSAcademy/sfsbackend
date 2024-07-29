@@ -1,6 +1,8 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
+require('dotenv').config();
+
 
 const authenticateJWT = (req, res, next) => {
     const token = req.headers.authorization;

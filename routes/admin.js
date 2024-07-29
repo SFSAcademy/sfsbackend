@@ -7,6 +7,7 @@ const fs = require('fs');
 const authenticateJWT = require('../middlewares/authenticateJWT');
 const bcrypt = require('bcrypt');
 const db = require('../config/db'); // Make sure you have this file set up to export your db connection
+require('dotenv').config();
 
 const router = express.Router();
 const app = express();
@@ -19,7 +20,7 @@ router.post('/login', (req, res) => {
     const { username, password } = req.body;
     // Replace with your own admin validation logic
     if (username === 'Shahfaisal' && password === 'adminpassword') {
-        const token = jwt.sign({ username }, process.env.JWT_SECRET, { expiresIn: '23h' });
+        const token = jwt.sign({ username }, process.env.JWT_SECRET, { expiresIn: '8h' });
         res.json({ success: true, token });
     } else {
         res.json({ success: false });
