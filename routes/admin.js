@@ -29,7 +29,7 @@ router.post('/login', (req, res) => {
 
 // Fetch new registered students
 router.get('/new-students', authenticateJWT, (req, res) => {
-    const query = 'SELECT * FROM newRegStud';
+    const query = 'SELECT * FROM newregstud';
     db.query(query, (err, results) => {
         if (err) {
             console.error('Error fetching new students:', err);
@@ -56,7 +56,7 @@ router.get('/registered-students', authenticateJWT, (req, res) => {
 router.post('/accept-student', authenticateJWT, async (req, res) => {
     const { studentId } = req.body;
 
-    const querySelect = 'SELECT * FROM newRegStud WHERE id = ?';
+    const querySelect = 'SELECT * FROM newregstud WHERE id = ?';
     db.query(querySelect, [studentId], async (err, results) => {
         if (err || results.length === 0) {
             return res.status(500).json({ error: 'Failed to fetch student' });
@@ -71,7 +71,7 @@ router.post('/accept-student', authenticateJWT, async (req, res) => {
                 return res.status(500).json({ error: 'Failed to accept student' });
             }
 
-            const queryDelete = 'DELETE FROM newRegStud WHERE id = ?';
+            const queryDelete = 'DELETE FROM newregstud WHERE id = ?';
             db.query(queryDelete, [studentId], (err, result) => {
                 if (err) {
                     console.error('Error deleting student from newRegStud:', err);

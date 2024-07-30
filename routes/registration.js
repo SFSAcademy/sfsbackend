@@ -27,7 +27,7 @@ router.post('/register', async (req, res) => {
     //     return res.status(400).json({ error: "Passwords do not match" });
     // }
 
-    const query = `INSERT INTO newRegStud (firstName, lastName, email, mobileNumber, password, registrationDate) VALUES (?, ?, ?, ?, ?, ?)`;
+    const query = `INSERT INTO newregstud (firstName, lastName, email, mobileNumber, password, registrationDate) VALUES (?, ?, ?, ?, ?, ?)`;
     db.query(query, [firstName, lastName, email, mobileNumber, hashedPassword, currentDate], (err, result) => {
         if (err) {
             console.error('Error inserting data:', err);
