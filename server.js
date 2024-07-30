@@ -8,9 +8,18 @@ const bcrypt = require('bcrypt');
 const app = express();
 const port = process.env.PORT || 5000;
 
+const allowedOrigins = process.env.ALLOWED_ORIGINS.split(',');
+
 const cors = require('cors');
 app.use(cors({
-    origin: 'http://localhost:3000',
+    origin: function(origin, callback) {
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            // Allow requests with no origin (like mobile apps or curl requests)
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
     optionsSuccessStatus: 204
