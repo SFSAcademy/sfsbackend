@@ -20,7 +20,7 @@ router.post('/login', (req, res) => {
     const { username, password } = req.body;
     // Replace with your own admin validation logic
     if (username === 'Shahfaisal' && password === 'adminpassword') {
-        const token = jwt.sign({ username }, process.env.JWT_SECRET, { expiresIn: '8h' });
+        const token = jwt.sign({ username }, process.env.JWT_SECRET, { expiresIn: '24h' });
         res.json({ success: true, token });
     } else {
         res.json({ success: false });
