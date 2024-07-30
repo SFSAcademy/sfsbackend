@@ -114,7 +114,7 @@ router.post('/remove-student', authenticateJWT, async (req, res) => {
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'uploads/');
+        cb(null, path.join(__dirname, '..', 'public_html','uploads'));
     },
     filename: (req, file, cb) => {
         cb(null, Date.now() + path.extname(file.originalname));
@@ -125,7 +125,7 @@ const upload = multer({ storage: storage });
 
 router.post('/upload', authenticateJWT, upload.single('document'), (req, res) => {
     const { category, subcategory, documentName } = req.body;
-    const filePath = req.file.path;
+    const filePath = path.join('uploads', req.file.filename);
 
     const query = `INSERT INTO documents (category, subcategory, document_name, file_path) VALUES (?, ?, ?, ?)`;
     db.query(query, [category, subcategory, documentName, filePath], (err, result) => {
@@ -180,7 +180,7 @@ router.delete('/delete-document/:id', authenticateJWT, (req, res) => {
 
 const videoStorage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'uploads/videos/');
+        cb(null, path.join(__dirname, '..', 'public_html','videos'));
     },
     filename: (req, file, cb) => {
         cb(null, Date.now() + path.extname(file.originalname));
@@ -191,7 +191,7 @@ const uploadVideo = multer({ storage: videoStorage });
 
 router.post('/upload-video', authenticateJWT, uploadVideo.single('video'), (req, res) => {
     const { category, videoName } = req.body;
-    const filePath = req.file.path;
+    const filePath = path.join('videos', req.file.filename);
 
     const query = `INSERT INTO videos (category, video_name, file_path) VALUES (?, ?, ?)`;
     db.query(query, [category, videoName, filePath], (err, result) => {
