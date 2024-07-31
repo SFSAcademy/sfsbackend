@@ -132,7 +132,7 @@ const uploadFileToFTP = async (file) => {
             host: process.env.FTP_HOST,
             user: process.env.FTP_USER,
             password: process.env.FTP_PASSWORD,
-            secure: process.env.FTP_SECURE === 'true'// or false, depending on your setup
+            secure: process.env.FTP_SECURE === 'false'// or false, depending on your setup
         });
         await client.ensureDir("/public_html/uploads");
         await client.uploadFrom(file.buffer, `/public_html/uploads/${file.originalname}`);
