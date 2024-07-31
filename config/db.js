@@ -11,11 +11,11 @@ const db = mysql.createPool({
   queueLimit: 0
 });
 
-db.connect((err) => {
-  if (err) {
-    throw err;
-  }
-  console.log('MySQL Connected...');
-});
+// db.connect((err) => {
+//   if (err) {
+//     throw err;
+//   }
+//   console.log('MySQL Connected...');
+// });
 
 module.exports = db;
