@@ -3,7 +3,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
 const mysql = require('mysql2');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -26,20 +26,6 @@ app.use(cors({
 }));
 
 app.use(bodyParser.json());
-
-// const db = mysql.createConnection({
-//   host: 'localhost',
-//   user: 'root',
-//   password: '',
-//   database: 'sfs_academy'
-// });
-
-// db.connect((err) => {
-//   if (err) {
-//     throw err;
-//   }
-//   console.log('MySQL Connected...');
-// });
 
 app.get('/', (req, res) => {
     res.send('Hello from the backend!');

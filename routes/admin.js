@@ -6,7 +6,7 @@ const ftp = require('basic-ftp');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const authenticateJWT = require('../middlewares/authenticateJWT');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const db = require('../config/db'); // Make sure you have this file set up to export your db connection
 require('dotenv').config();
 
