@@ -129,10 +129,10 @@ const uploadFileToFTP = async (file) => {
     client.ftp.verbose = true;
     try {
         await client.access({
-            host: "your-godaddy-ftp-host",
-            user: "your-godaddy-username",
-            password: "your-godaddy-password",
-            secure: true // or false, depending on your setup
+            host: process.env.FTP_HOST,
+            user: process.env.FTP_USER,
+            password: process.env.FTP_PASSWORD,
+            secure: process.env.FTP_SECURE === 'true'// or false, depending on your setup
         });
         await client.ensureDir("/public_html/uploads");
         await client.uploadFrom(file.buffer, `/public_html/uploads/${file.originalname}`);
