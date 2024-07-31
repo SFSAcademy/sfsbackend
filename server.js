@@ -6,7 +6,6 @@ const mysql = require('mysql2');
 const bcrypt = require('bcryptjs');
 
 const app = express();
-const port = process.env.PORT || 5000;
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS.split(',');
 
@@ -42,6 +41,19 @@ app.use('/api/student', studentRoute);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+process.on('SIGINT', () => {
+    console.log('SIGINT received. Closing database connection...');
+    pool.end((err) => {
+        if (err) {
+            console.error('Error closing MySQL pool:', err);
+        } else {
+            console.log('MySQL pool closed.');
+        }
+        process.exit(err ? 1 : 0);
+    });
+});
+
+const port = process.env.PORT || 5000;
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
