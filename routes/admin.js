@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const multer = require('multer');
 const path = require('path');
+const ftp = require('basic-ftp');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const authenticateJWT = require('../middlewares/authenticateJWT');
@@ -112,29 +113,56 @@ router.post('/remove-student', authenticateJWT, async (req, res) => {
     });
 });
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, path.join(__dirname, '..', 'public_html','uploads'));
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
-});
-
+const storage = multer.memoryStorage()
+// const storage = multer.diskStorage({
+//     destination: (req, file, cb) => {
+//         cb(null, path.join(__dirname, '..', 'public_html','uploads'));
+//     },
+//     filename: (req, file, cb) => {
+//         cb(null, Date.now() + path.extname(file.originalname));
+//     }
+// });
 const upload = multer({ storage: storage });
 
-router.post('/upload', authenticateJWT, upload.single('document'), (req, res) => {
-    const { category, subcategory, documentName } = req.body;
-    const filePath = path.join('uploads', req.file.filename);
+const uploadFileToFTP = async (file) => {
+    const client = new ftp.Client();
+    client.ftp.verbose = true;
+    try {
+        await client.access({
+            host: "your-godaddy-ftp-host",
+            user: "your-godaddy-username",
+            password: "your-godaddy-password",
+            secure: true // or false, depending on your setup
+        });
+        await client.ensureDir("/public_html/uploads");
+        await client.uploadFrom(file.buffer, `/public_html/uploads/${file.originalname}`);
+    }
+    catch (err) {
+        console.error(err);
+    }
+    client.close();
+};
 
-    const query = `INSERT INTO documents (category, subcategory, document_name, file_path) VALUES (?, ?, ?, ?)`;
-    db.query(query, [category, subcategory, documentName, filePath], (err, result) => {
-        if (err) {
-            console.error('Error inserting document data:', err);
-            return res.status(500).json({ error: "Document upload failed" });
-        }
-        res.status(201).json({ message: "Document uploaded successfully", document: { id: result.insertId, category, subcategory, document_name: documentName, file_path: filePath } });
-    });
+router.post('/upload', authenticateJWT, upload.single('document'), async (req, res) => {
+    const { category, subcategory, documentName } = req.body;
+    const fileName = Date.now() + path.extname(req.file.originalname);
+    const filePath = `uploads/${fileName}`;
+
+    try {
+        await uploadFileToFTP(req.file);
+
+        const query = `INSERT INTO documents (category, subcategory, document_name, file_path) VALUES (?, ?, ?, ?)`;
+        db.query(query, [category, subcategory, documentName, filePath], (err, result) => {
+            if (err) {
+                console.error('Error inserting document data:', err);
+                return res.status(500).json({ error: "Document upload failed" });
+            }
+            res.status(201).json({ message: "Document uploaded successfully", document: { id: result.insertId, category, subcategory, document_name: documentName, file_path: filePath } });
+        });
+    } catch (err) {
+        console.error('Error uploading document:', err);
+        return res.status(500).json({ error: "Document upload failed" });
+    }
 });
 
 router.get('/documents', authenticateJWT, (req, res) => {
@@ -180,7 +208,7 @@ router.delete('/delete-document/:id', authenticateJWT, (req, res) => {
 
 const videoStorage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, path.join(__dirname, '..', 'public_html','videos'));
+        cb(null, path.join(__dirname, '..', 'public_html', 'videos'));
     },
     filename: (req, file, cb) => {
         cb(null, Date.now() + path.extname(file.originalname));

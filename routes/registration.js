@@ -93,13 +93,13 @@ router.post('/forgot-password', (req, res) => {
                     If you did not request this, please ignore this email and your password will remain unchanged.\n`,
             };
             console.log(`http://localhost:3000/reset-password?token3=${token3}`)
-            // transporter.sendMail(mailOptions, (mailErr) => {
-            //     if (mailErr) {
-            //         console.error('Error sending email:', mailErr);
-            //         return res.status(500).json({ success: false, message: 'Error sending reset email.' });
-            //     }
-            //     res.json({ success: true, message: 'Password reset email sent.' });
-            // });
+            transporter.sendMail(mailOptions, (mailErr) => {
+                if (mailErr) {
+                    console.error('Error sending email:', mailErr);
+                    return res.status(500).json({ success: false, message: 'Error sending reset email.' });
+                }
+                res.json({ success: true, message: 'Password reset email sent.' });
+            });
         });
     });
 });
