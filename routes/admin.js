@@ -4,7 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const ftp = require('basic-ftp');
 const jwt = require('jsonwebtoken');
-const fs = require('fs');
+const { Readable } = require('stream');
 const authenticateJWT = require('../middlewares/authenticateJWT');
 const bcrypt = require('bcryptjs');
 const db = require('../config/db'); // Make sure you have this file set up to export your db connection
@@ -130,8 +130,13 @@ const uploadFileToFTP = async (file) => {
                 rejectUnauthorized: false
             }
         });
-        await client.ensureDir("/public_html/uploads");
-        await client.uploadFrom(file.buffer, `/public_html/uploads/${Date.now()}_${file.originalname}`);
+        await client.ensureDir("/");
+
+        const readableStream = new Readable();
+        readableStream._read = () => {}; // _read is required but you can noop it
+        readableStream.push(file.buffer);
+        readableStream.push(null);
+        await client.uploadFrom(readableStream, `/${Date.now()}_${file.originalname}`);
     }
     catch (err) {
         console.error(err);
@@ -249,8 +254,13 @@ const uploadVideoToFTP = async (file) => {
                 rejectUnauthorized: false
             }
         });
-        await client.ensureDir("/public_html/videos");
-        await client.uploadFrom(file.buffer, `/public_html/videos/${Date.now()}_${file.originalname}`);
+        await client.ensureDir("/");
+
+        const readableStream = new Readable();
+        readableStream._read = () => {}; // _read is required but you can noop it
+        readableStream.push(file.buffer);
+        readableStream.push(null);
+        await client.uploadFrom(readableStream, `/${Date.now()}_${file.originalname}`);
     }
     catch (err) {
         console.error(err);
