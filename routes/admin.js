@@ -127,6 +127,7 @@ const upload = multer({ storage: storage });
 const uploadFileToFTP = async (file) => {
     const client = new ftp.Client();
     client.ftp.verbose = true;
+    
     try {
         await client.access({
             host: process.env.FTP_HOST,
