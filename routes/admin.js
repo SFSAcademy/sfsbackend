@@ -275,12 +275,12 @@ router.post('/upload-video', authenticateJWT, uploadVideo.single('video'), async
         await uploadVideoToFTP(req.file, fileName);
 
         const query = `INSERT INTO videos (category, video_name, file_path) VALUES (?, ?, ?)`;
-        db.query(query, [category, videoName, filePath], (err, result) => {
+        db.query(query, [category, videoName, fileName], (err, result) => {
             if (err) {
                 console.error('Error inserting video data:', err);
                 return res.status(500).json({ error: "Video upload failed" });
             }
-            res.status(201).json({ message: "Video uploaded successfully", video: { id: result.insertId, category, video_name: videoName, file_path: filePath } });
+            res.status(201).json({ message: "Video uploaded successfully", video: { id: result.insertId, category, video_name: videoName, file_path: fileName } });
         });
     } catch (err) {
         console.error('Error uploading Video:', err);
