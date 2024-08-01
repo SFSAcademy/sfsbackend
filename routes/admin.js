@@ -116,7 +116,7 @@ router.post('/remove-student', authenticateJWT, async (req, res) => {
 const storage = multer.memoryStorage()
 const upload = multer({ storage: storage });
 
-const uploadFileToFTP = async (file) => {
+const uploadFileToFTP = async (file, fileName) => {
     const client = new ftp.Client();
     client.ftp.verbose = true;
     
@@ -136,7 +136,7 @@ const uploadFileToFTP = async (file) => {
         readableStream._read = () => {}; // _read is required but you can noop it
         readableStream.push(file.buffer);
         readableStream.push(null);
-        await client.uploadFrom(readableStream, `/${Date.now()}_${file.originalname}`);
+        await client.uploadFrom(readableStream, `/${fileName}`);
     }
     catch (err) {
         console.error(err);
@@ -146,19 +146,18 @@ const uploadFileToFTP = async (file) => {
 
 router.post('/upload', authenticateJWT, upload.single('document'), async (req, res) => {
     const { category, subcategory, documentName } = req.body;
-    const fileName = Date.now() + path.extname(req.file.originalname);
-    const filePath = `uploads/${fileName}`;
+    const fileName = `${Date.now()}_${req.file.originalname}`;
 
     try {
-        await uploadFileToFTP(req.file);
+        await uploadFileToFTP(req.file, fileName);
 
         const query = `INSERT INTO documents (category, subcategory, document_name, file_path) VALUES (?, ?, ?, ?)`;
-        db.query(query, [category, subcategory, documentName, filePath], (err, result) => {
+        db.query(query, [category, subcategory, documentName, fileName], (err, result) => {
             if (err) {
                 console.error('Error inserting document data:', err);
                 return res.status(500).json({ error: "Document upload failed" });
             }
-            res.status(201).json({ message: "Document uploaded successfully", document: { id: result.insertId, category, subcategory, document_name: documentName, file_path: filePath } });
+            res.status(201).json({ message: "Document uploaded successfully", document: { id: result.insertId, category, subcategory, document_name: documentName, file_path: fileName } });
         });
     } catch (err) {
         console.error('Error uploading document:', err);
@@ -191,7 +190,7 @@ const deleteFileFromFTP = async (filePath) => {
                 rejectUnauthorized: false
             }
         });
-        await client.remove(`/public_html/${filePath}`);
+        await client.remove(`/${filePath}`);
     } catch (err) {
         console.error(err);
     }
@@ -240,7 +239,7 @@ const videoStorage = multer.memoryStorage()
 // });
 const uploadVideo = multer({ storage: videoStorage });
 
-const uploadVideoToFTP = async (file) => {
+const uploadVideoToFTP = async (file, fileName) => {
     const client = new ftp.Client();
     client.ftp.verbose = true;
     
@@ -260,7 +259,7 @@ const uploadVideoToFTP = async (file) => {
         readableStream._read = () => {}; // _read is required but you can noop it
         readableStream.push(file.buffer);
         readableStream.push(null);
-        await client.uploadFrom(readableStream, `/${Date.now()}_${file.originalname}`);
+        await client.uploadFrom(readableStream, `/${fileName}`);
     }
     catch (err) {
         console.error(err);
@@ -270,11 +269,10 @@ const uploadVideoToFTP = async (file) => {
 
 router.post('/upload-video', authenticateJWT, uploadVideo.single('video'), async (req, res) => {
     const { category, videoName } = req.body;
-    const fileName = Date.now() + path.extname(req.file.originalname);
-    const filePath = `videos/${fileName}`;
+    const fileName = `${Date.now()}_${req.file.originalname}`;
 
     try {
-        await uploadVideoToFTP(req.file);
+        await uploadVideoToFTP(req.file, fileName);
 
         const query = `INSERT INTO videos (category, video_name, file_path) VALUES (?, ?, ?)`;
         db.query(query, [category, videoName, filePath], (err, result) => {
@@ -315,7 +313,7 @@ const deleteVideoFromFTP = async (filePath) => {
                 rejectUnauthorized: false
             }
         });
-        await client.remove(`/public_html/${filePath}`);
+        await client.remove(`/${filePath}`);
     } catch (err) {
         console.error(err);
     }
