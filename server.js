@@ -4,7 +4,7 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const mysql = require('mysql2');
 const bcrypt = require('bcryptjs');
-const db = require('../config/db');
+const db = require('./config/db');
 
 const app = express();
 
