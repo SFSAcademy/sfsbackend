@@ -127,6 +127,8 @@ const upload = multer({ storage: storage });
 const uploadFileToFTP = async (file) => {
     const client = new ftp.Client();
     client.ftp.verbose = true;
+    client.ftp.tls.options.rejectUnauthorized = false;
+    
     try {
         await client.access({
             host: process.env.FTP_HOST,
@@ -179,6 +181,8 @@ router.get('/documents', authenticateJWT, (req, res) => {
 const deleteFileFromFTP = async (filePath) => {
     const client = new ftp.Client();
     client.ftp.verbose = true;
+    client.ftp.tls.options.rejectUnauthorized = false;
+    
     try {
         await client.access({
             host: process.env.FTP_HOST,
@@ -238,6 +242,8 @@ const uploadVideo = multer({ storage: videoStorage });
 const uploadVideoToFTP = async (file) => {
     const client = new ftp.Client();
     client.ftp.verbose = true;
+    client.ftp.tls.options.rejectUnauthorized = false;
+    
     try {
         await client.access({
             host: process.env.FTP_HOST,
@@ -290,6 +296,7 @@ router.get('/videos', authenticateJWT, (req, res) => {
 const deleteVideoFromFTP = async (filePath) => {
     const client = new ftp.Client();
     client.ftp.verbose = true;
+    client.ftp.tls.options.rejectUnauthorized = false;
     try {
         await client.access({
             host: process.env.FTP_HOST,
@@ -322,7 +329,7 @@ router.delete('/delete-video/:id', authenticateJWT, (req, res) => {
             }
 
             try {
-                await deleteFileFromFTP(filePath);
+                await deleteVideoFromFTP(filePath);
                 res.json({ message: "Document deleted successfully" });
             } catch (err) {
                 console.error('Error deleting file from FTP storage:', err);
