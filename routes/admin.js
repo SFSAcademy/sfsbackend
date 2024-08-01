@@ -135,7 +135,7 @@ const uploadFileToFTP = async (file) => {
             secure: process.env.FTP_SECURE === 'false'// or false, depending on your setup
         });
         await client.ensureDir("/public_html/uploads");
-        await client.uploadFrom(file.buffer, `/public_html/uploads/${file.originalname}`);
+        await client.uploadFrom(file.buffer, `/public_html/uploads/${Date.now()}_${file.originalname}`);
     }
     catch (err) {
         console.error(err);
@@ -176,6 +176,23 @@ router.get('/documents', authenticateJWT, (req, res) => {
     });
 });
 
+const deleteFileFromFTP = async (filePath) => {
+    const client = new ftp.Client();
+    client.ftp.verbose = true;
+    try {
+        await client.access({
+            host: process.env.FTP_HOST,
+            user:  process.env.FTP_USER,
+            password: process.env.FTP_PASSWORD,
+            secure: process.env.FTP_SECURE === 'false' // Set to false if using regular FTP, true for FTPS/SFTP
+        });
+        await client.remove(`/public_html/${filePath}`);
+    } catch (err) {
+        console.error(err);
+    }
+    client.close();
+};
+
 router.delete('/delete-document/:id', authenticateJWT, (req, res) => {
     const documentId = req.params.id;
 
@@ -189,46 +206,74 @@ router.delete('/delete-document/:id', authenticateJWT, (req, res) => {
         const filePath = results[0].file_path;
 
         const queryDelete = 'DELETE FROM documents WHERE id = ?';
-        db.query(queryDelete, [documentId], (err, result) => {
+        db.query(queryDelete, [documentId], async (err, result) => {
             if (err) {
                 console.error('Error deleting document from database:', err);
                 return res.status(500).json({ error: "Failed to delete document" });
             }
 
-            fs.unlink(filePath, (err) => {
-                if (err) {
-                    console.error('Error deleting file from storage:', err);
-                    return res.status(500).json({ error: "Failed to delete file from storage" });
-                }
+            try {
+                await deleteFileFromFTP(filePath);
                 res.json({ message: "Document deleted successfully" });
-            });
+            } catch (err) {
+                console.error('Error deleting file from FTP storage:', err);
+                return res.status(500).json({ error: "Failed to delete file from FTP storage" });
+            }
+
         });
     });
 });
 
-const videoStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, path.join(__dirname, '..', 'public_html', 'videos'));
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
-});
-
+const videoStorage = multer.memoryStorage()
+// const videoStorage = multer.diskStorage({
+//     destination: (req, file, cb) => {
+//         cb(null, path.join(__dirname, '..', 'public_html', 'videos'));
+//     },
+//     filename: (req, file, cb) => {
+//         cb(null, Date.now() + path.extname(file.originalname));
+//     }
+// });
 const uploadVideo = multer({ storage: videoStorage });
 
-router.post('/upload-video', authenticateJWT, uploadVideo.single('video'), (req, res) => {
-    const { category, videoName } = req.body;
-    const filePath = path.join('videos', req.file.filename);
+const uploadVideoToFTP = async (file) => {
+    const client = new ftp.Client();
+    client.ftp.verbose = true;
+    try {
+        await client.access({
+            host: process.env.FTP_HOST,
+            user: process.env.FTPv_USER,
+            password: process.env.FTPv_PASSWORD,
+            secure: process.env.FTPv_SECURE === 'false'
+        });
+        await client.ensureDir("/public_html/videos");
+        await client.uploadFrom(file.buffer, `/public_html/videos/${Date.now()}_${file.originalname}`);
+    }
+    catch (err) {
+        console.error(err);
+    }
+    client.close();
+};
 
-    const query = `INSERT INTO videos (category, video_name, file_path) VALUES (?, ?, ?)`;
-    db.query(query, [category, videoName, filePath], (err, result) => {
-        if (err) {
-            console.error('Error inserting video data:', err);
-            return res.status(500).json({ error: "Video upload failed" });
-        }
-        res.status(201).json({ message: "Video uploaded successfully", video: { id: result.insertId, category, video_name: videoName, file_path: filePath } });
-    });
+router.post('/upload-video', authenticateJWT, uploadVideo.single('video'), async (req, res) => {
+    const { category, videoName } = req.body;
+    const fileName = Date.now() + path.extname(req.file.originalname);
+    const filePath = `videos/${fileName}`;
+
+    try {
+        await uploadVideoToFTP(req.file);
+
+        const query = `INSERT INTO videos (category, video_name, file_path) VALUES (?, ?, ?)`;
+        db.query(query, [category, videoName, filePath], (err, result) => {
+            if (err) {
+                console.error('Error inserting video data:', err);
+                return res.status(500).json({ error: "Video upload failed" });
+            }
+            res.status(201).json({ message: "Video uploaded successfully", video: { id: result.insertId, category, video_name: videoName, file_path: filePath } });
+        });
+    } catch (err) {
+        console.error('Error uploading Video:', err);
+        return res.status(500).json({ error: "Video upload failed" });
+    }
 });
 
 router.get('/videos', authenticateJWT, (req, res) => {
@@ -242,6 +287,23 @@ router.get('/videos', authenticateJWT, (req, res) => {
     });
 });
 
+const deleteVideoFromFTP = async (filePath) => {
+    const client = new ftp.Client();
+    client.ftp.verbose = true;
+    try {
+        await client.access({
+            host: process.env.FTP_HOST,
+            user:  process.env.FTPv_USER,
+            password: process.env.FTPv_PASSWORD,
+            secure: process.env.FTPv_SECURE === 'false' // Set to false if using regular FTP, true for FTPS/SFTP
+        });
+        await client.remove(`/public_html/${filePath}`);
+    } catch (err) {
+        console.error(err);
+    }
+    client.close();
+};
+
 router.delete('/delete-video/:id', authenticateJWT, (req, res) => {
     const videoId = req.params.id;
 
@@ -253,20 +315,19 @@ router.delete('/delete-video/:id', authenticateJWT, (req, res) => {
 
         const filePath = results[0].file_path;
         const queryDelete = 'DELETE FROM videos WHERE id = ?';
-        db.query(queryDelete, [videoId], (err, result) => {
+        db.query(queryDelete, [videoId], async (err, result) => {
             if (err) {
                 console.error('Error deleting video:', err);
                 return res.status(500).json({ error: "Failed to delete video" });
             }
 
-            // Remove file from storage
-            fs.unlink(filePath, (err) => {
-                if (err) {
-                    console.error('Error deleting file:', err);
-                    return res.status(500).json({ error: "Failed to delete file" });
-                }
-                res.json({ message: "Video deleted successfully" });
-            });
+            try {
+                await deleteFileFromFTP(filePath);
+                res.json({ message: "Document deleted successfully" });
+            } catch (err) {
+                console.error('Error deleting file from FTP storage:', err);
+                return res.status(500).json({ error: "Failed to delete file from FTP storage" });
+            }
         });
     });
 });
