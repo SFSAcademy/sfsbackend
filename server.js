@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const mysql = require('mysql2');
 const bcrypt = require('bcryptjs');
+const db = require('../config/db');
 
 const app = express();
 
@@ -43,7 +44,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 process.on('SIGINT', () => {
     console.log('SIGINT received. Closing database connection...');
-    pool.end((err) => {
+    db.end((err) => {
         if (err) {
             console.error('Error closing MySQL pool:', err);
         } else {

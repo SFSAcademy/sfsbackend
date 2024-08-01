@@ -114,27 +114,21 @@ router.post('/remove-student', authenticateJWT, async (req, res) => {
 });
 
 const storage = multer.memoryStorage()
-// const storage = multer.diskStorage({
-//     destination: (req, file, cb) => {
-//         cb(null, path.join(__dirname, '..', 'public_html','uploads'));
-//     },
-//     filename: (req, file, cb) => {
-//         cb(null, Date.now() + path.extname(file.originalname));
-//     }
-// });
 const upload = multer({ storage: storage });
 
 const uploadFileToFTP = async (file) => {
     const client = new ftp.Client();
     client.ftp.verbose = true;
-    client.ftp.tls.options.rejectUnauthorized = false;
     
     try {
         await client.access({
             host: process.env.FTP_HOST,
             user: process.env.FTP_USER,
             password: process.env.FTP_PASSWORD,
-            secure: process.env.FTP_SECURE === 'false'// or false, depending on your setup
+            secure: true,// or false, depending on your setup
+            secureOptions: {
+                rejectUnauthorized: false
+            }
         });
         await client.ensureDir("/public_html/uploads");
         await client.uploadFrom(file.buffer, `/public_html/uploads/${Date.now()}_${file.originalname}`);
@@ -181,14 +175,16 @@ router.get('/documents', authenticateJWT, (req, res) => {
 const deleteFileFromFTP = async (filePath) => {
     const client = new ftp.Client();
     client.ftp.verbose = true;
-    client.ftp.tls.options.rejectUnauthorized = false;
     
     try {
         await client.access({
             host: process.env.FTP_HOST,
             user:  process.env.FTP_USER,
             password: process.env.FTP_PASSWORD,
-            secure: process.env.FTP_SECURE === 'false' // Set to false if using regular FTP, true for FTPS/SFTP
+            secure: true,
+            secureOptions: {
+                rejectUnauthorized: false
+            }
         });
         await client.remove(`/public_html/${filePath}`);
     } catch (err) {
@@ -242,14 +238,16 @@ const uploadVideo = multer({ storage: videoStorage });
 const uploadVideoToFTP = async (file) => {
     const client = new ftp.Client();
     client.ftp.verbose = true;
-    client.ftp.tls.options.rejectUnauthorized = false;
     
     try {
         await client.access({
             host: process.env.FTP_HOST,
             user: process.env.FTPv_USER,
             password: process.env.FTPv_PASSWORD,
-            secure: process.env.FTPv_SECURE === 'false'
+            secure: true,
+            secureOptions: {
+                rejectUnauthorized: false
+            }
         });
         await client.ensureDir("/public_html/videos");
         await client.uploadFrom(file.buffer, `/public_html/videos/${Date.now()}_${file.originalname}`);
@@ -296,13 +294,16 @@ router.get('/videos', authenticateJWT, (req, res) => {
 const deleteVideoFromFTP = async (filePath) => {
     const client = new ftp.Client();
     client.ftp.verbose = true;
-    client.ftp.tls.options.rejectUnauthorized = false;
+
     try {
         await client.access({
             host: process.env.FTP_HOST,
             user:  process.env.FTPv_USER,
             password: process.env.FTPv_PASSWORD,
-            secure: process.env.FTPv_SECURE === 'false' // Set to false if using regular FTP, true for FTPS/SFTP
+            secure: true,
+            secureOptions: {
+                rejectUnauthorized: false
+            }
         });
         await client.remove(`/public_html/${filePath}`);
     } catch (err) {
