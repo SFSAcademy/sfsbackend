@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const ftp = require('basic-ftp');
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
 // const { Readable } = require('stream');
 const authenticateJWT = require('../middlewares/authenticateJWT');
 const db = require('../config/db'); // Make sure you have this file set up to export your db connection
