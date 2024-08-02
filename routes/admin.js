@@ -292,6 +292,12 @@ router.post('/upload-video-chunk', [authenticateJWT, uploadVideo.single('chunk')
     try {
         const { category, videoName, fileName, start } = req.body;
         const chunk = req.file;
+        const uploadDir = '/tmp/uploads';
+
+        // Ensure the directory exists
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
         // const fileName = `${Date.now()}_${req.file.originalname}`;
         const localFilePath = path.join('/tmp/uploads', fileName);
 
