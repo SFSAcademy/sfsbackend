@@ -254,7 +254,7 @@ const videoStorage = multer.memoryStorage()
 // });
 const uploadVideo = multer({ storage: videoStorage });
 
-const uploadVideoToFTP = async (fileName, retries = 3) => {
+const uploadVideoToFTP = async (fileBuffer, fileName, retries = 3) => {
     const client = new ftp.Client();
     client.ftp.verbose = true;
 
@@ -271,14 +271,14 @@ const uploadVideoToFTP = async (fileName, retries = 3) => {
         await client.ensureDir("/");
         const readableStream = new Readable();
         readableStream._read = () => {}; // _read is required but you can noop it
-        readableStream.push(file.buffer);
+        readableStream.push(fileBuffer);
         readableStream.push(null);
         await client.uploadFrom(readableStream, `/${fileName}`);
     }
     catch (err) {
         if (retries > 0) {
             console.error(`FTP upload failed, retrying... (${retries} retries left)`, err);
-            await uploadVideoToFTP(fileName, retries - 1); // Retry upload
+            await uploadVideoToFTP(localFilePath,fileName, retries - 1); // Retry upload
         } else {
             console.error('Failed to upload video to FTP after multiple attempts', err);
             throw err;
@@ -304,7 +304,7 @@ router.post('/upload-video-chunk', [authenticateJWT, uploadVideo.single('chunk')
         fs.appendFileSync(localFilePath, chunk.buffer);
         
         if (fs.statSync(localFilePath).size >= parseInt(start) + chunk.size) {
-            await uploadVideoToFTP(localFilePath, fileName);
+            await uploadVideoToFTP(chunk.buffer, fileName);
         }
         fs.unlinkSync(localFilePath);
 
