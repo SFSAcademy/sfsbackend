@@ -113,10 +113,17 @@ router.post('/remove-student', authenticateJWT, async (req, res) => {
     });
 });
 
-const storage = multer.memoryStorage()
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, '/tmp/uploads');
+    },
+    filename: (req, file, cb) => {
+        cb(null, path.extname(file.originalname));
+    }
+});
 const upload = multer({ storage: storage });
 
-const uploadFileToFTP = async (file, fileName) => {
+const uploadFileToFTP = async (localFilePath, fileName) => {
     const client = new ftp.Client();
     client.ftp.verbose = true;
     
@@ -131,12 +138,11 @@ const uploadFileToFTP = async (file, fileName) => {
             }
         });
         await client.ensureDir("/");
-
-        const readableStream = new Readable();
-        readableStream._read = () => {}; // _read is required but you can noop it
-        readableStream.push(file.buffer);
-        readableStream.push(null);
-        await client.uploadFrom(readableStream, `/${fileName}`);
+        // const readableStream = new Readable();
+        // readableStream._read = () => {}; // _read is required but you can noop it
+        // readableStream.push(file.buffer);
+        // readableStream.push(null);
+        await client.uploadFrom(localFilePath, `/${fileName}`);
     }
     catch (err) {
         console.error(err);
@@ -147,9 +153,10 @@ const uploadFileToFTP = async (file, fileName) => {
 router.post('/upload', authenticateJWT, upload.single('document'), async (req, res) => {
     const { category, subcategory, documentName } = req.body;
     const fileName = `${Date.now()}_${req.file.originalname}`;
+    const localFilePath = req.file.path;
 
     try {
-        await uploadFileToFTP(req.file, fileName);
+        await uploadFileToFTP(localFilePath, fileName);
 
         const query = `INSERT INTO documents (category, subcategory, document_name, file_path) VALUES (?, ?, ?, ?)`;
         db.query(query, [category, subcategory, documentName, fileName], (err, result) => {
@@ -162,6 +169,14 @@ router.post('/upload', authenticateJWT, upload.single('document'), async (req, r
     } catch (err) {
         console.error('Error uploading document:', err);
         return res.status(500).json({ error: "Document upload failed" });
+    } finally {
+        fs.unlink(localFilePath, (err) => {
+            if (err) {
+                console.error(`Failed to delete local file: ${localFilePath}`, err);
+            } else {
+                console.log(`Successfully deleted local file: ${localFilePath}`);
+            }
+        });
     }
 });
 
@@ -228,18 +243,18 @@ router.delete('/delete-document/:id', authenticateJWT, (req, res) => {
     });
 });
 
-const videoStorage = multer.memoryStorage()
-// const videoStorage = multer.diskStorage({
-//     destination: (req, file, cb) => {
-//         cb(null, path.join(__dirname, '..', 'public_html', 'videos'));
-//     },
-//     filename: (req, file, cb) => {
-//         cb(null, Date.now() + path.extname(file.originalname));
-//     }
-// });
+// const videoStorage = multer.memoryStorage()
+const videoStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null,'/tmp/uploads');
+    },
+    filename: (req, file, cb) => {
+        cb(null, path.extname(file.originalname));
+    }
+});
 const uploadVideo = multer({ storage: videoStorage });
 
-const uploadVideoToFTP = async (file, fileName) => {
+const uploadVideoToFTP = async (localFilePath, fileName) => {
     const client = new ftp.Client();
     client.ftp.verbose = true;
     
@@ -254,12 +269,11 @@ const uploadVideoToFTP = async (file, fileName) => {
             }
         });
         await client.ensureDir("/");
-
-        const readableStream = new Readable();
-        readableStream._read = () => {}; // _read is required but you can noop it
-        readableStream.push(file.buffer);
-        readableStream.push(null);
-        await client.uploadFrom(readableStream, `/${fileName}`);
+        // const readableStream = new Readable();
+        // readableStream._read = () => {}; // _read is required but you can noop it
+        // readableStream.push(file.buffer);
+        // readableStream.push(null);
+        await client.uploadFrom(localFilePath, `/${fileName}`);
     }
     catch (err) {
         console.error(err);
@@ -270,9 +284,10 @@ const uploadVideoToFTP = async (file, fileName) => {
 router.post('/upload-video', authenticateJWT, uploadVideo.single('video'), async (req, res) => {
     const { category, videoName } = req.body;
     const fileName = `${Date.now()}_${req.file.originalname}`;
+    const localFilePath = req.file.path;
 
     try {
-        await uploadVideoToFTP(req.file, fileName);
+        await uploadVideoToFTP(localFilePath, fileName);
 
         const query = `INSERT INTO videos (category, video_name, file_path) VALUES (?, ?, ?)`;
         db.query(query, [category, videoName, fileName], (err, result) => {
@@ -285,6 +300,14 @@ router.post('/upload-video', authenticateJWT, uploadVideo.single('video'), async
     } catch (err) {
         console.error('Error uploading Video:', err);
         return res.status(500).json({ error: "Video upload failed" });
+    } finally {
+        fs.unlink(localFilePath, (err) => {
+            if (err) {
+                console.error(`Failed to delete local file: ${localFilePath}`, err);
+            } else {
+                console.log(`Successfully deleted local file: ${localFilePath}`);
+            }
+        });
     }
 });
 
