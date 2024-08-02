@@ -4,9 +4,8 @@ const multer = require('multer');
 const path = require('path');
 const ftp = require('basic-ftp');
 const jwt = require('jsonwebtoken');
-const { Readable } = require('stream');
+// const { Readable } = require('stream');
 const authenticateJWT = require('../middlewares/authenticateJWT');
-const bcrypt = require('bcryptjs');
 const db = require('../config/db'); // Make sure you have this file set up to export your db connection
 require('dotenv').config();
 
@@ -126,7 +125,7 @@ const upload = multer({ storage: storage });
 const uploadFileToFTP = async (localFilePath, fileName) => {
     const client = new ftp.Client();
     client.ftp.verbose = true;
-    
+
     try {
         await client.access({
             host: process.env.FTP_HOST,
@@ -194,11 +193,11 @@ router.get('/documents', authenticateJWT, (req, res) => {
 const deleteFileFromFTP = async (filePath) => {
     const client = new ftp.Client();
     client.ftp.verbose = true;
-    
+
     try {
         await client.access({
             host: process.env.FTP_HOST,
-            user:  process.env.FTP_USER,
+            user: process.env.FTP_USER,
             password: process.env.FTP_PASSWORD,
             secure: true,
             secureOptions: {
@@ -246,7 +245,7 @@ router.delete('/delete-document/:id', authenticateJWT, (req, res) => {
 // const videoStorage = multer.memoryStorage()
 const videoStorage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null,'/tmp/uploads');
+        cb(null, '/tmp/uploads');
     },
     filename: (req, file, cb) => {
         cb(null, path.extname(file.originalname));
@@ -254,16 +253,16 @@ const videoStorage = multer.diskStorage({
 });
 const uploadVideo = multer({ storage: videoStorage });
 
-const uploadVideoToFTP = async (localFilePath, fileName) => {
+const uploadVideoToFTP = async (localFilePath, fileName, retries = 3) => {
     const client = new ftp.Client();
     client.ftp.verbose = true;
-    
+
     try {
         await client.access({
             host: process.env.FTP_HOST,
             user: process.env.FTPv_USER,
             password: process.env.FTPv_PASSWORD,
-            secure: true,
+            secure: false,
             secureOptions: {
                 rejectUnauthorized: false
             }
@@ -276,18 +275,33 @@ const uploadVideoToFTP = async (localFilePath, fileName) => {
         await client.uploadFrom(localFilePath, `/${fileName}`);
     }
     catch (err) {
-        console.error(err);
+        if (retries > 0) {
+            console.error(`FTP upload failed, retrying... (${retries} retries left)`, err);
+            await uploadVideoToFTP(localFilePath, fileName, retries - 1); // Retry upload
+        } else {
+            console.error('Failed to upload video to FTP after multiple attempts', err);
+            throw err;
+        }
+    } finally {
+        client.close();
     }
-    client.close();
 };
 
-router.post('/upload-video', authenticateJWT, uploadVideo.single('video'), async (req, res) => {
-    const { category, videoName } = req.body;
-    const fileName = `${Date.now()}_${req.file.originalname}`;
-    const localFilePath = req.file.path;
-
+router.post('/upload-video-chunk', [authenticateJWT, uploadVideo.single('chunk')], async (req, res) => {
     try {
-        await uploadVideoToFTP(localFilePath, fileName);
+        const { category, videoName, fileName, start } = req.body;
+        const chunk = req.file;
+        // const fileName = `${Date.now()}_${req.file.originalname}`;
+        const localFilePath = path.join('/tmp/uploads', fileName);
+
+        fs.appendFileSync(localFilePath, fs.readFileSync(chunk.path));
+        fs.unlinkSync(chunk.path);
+
+        const fileStat = fs.statSync(localFilePath);
+        if (fileStat.size >= parseInt(start) + chunk.size) {
+            await uploadVideoToFTP(localFilePath, fileName);
+        }
+        fs.unlinkSync(localFilePath);
 
         const query = `INSERT INTO videos (category, video_name, file_path) VALUES (?, ?, ?)`;
         db.query(query, [category, videoName, fileName], (err, result) => {
@@ -300,14 +314,6 @@ router.post('/upload-video', authenticateJWT, uploadVideo.single('video'), async
     } catch (err) {
         console.error('Error uploading Video:', err);
         return res.status(500).json({ error: "Video upload failed" });
-    } finally {
-        fs.unlink(localFilePath, (err) => {
-            if (err) {
-                console.error(`Failed to delete local file: ${localFilePath}`, err);
-            } else {
-                console.log(`Successfully deleted local file: ${localFilePath}`);
-            }
-        });
     }
 });
 
@@ -329,7 +335,7 @@ const deleteVideoFromFTP = async (filePath) => {
     try {
         await client.access({
             host: process.env.FTP_HOST,
-            user:  process.env.FTPv_USER,
+            user: process.env.FTPv_USER,
             password: process.env.FTPv_PASSWORD,
             secure: true,
             secureOptions: {
