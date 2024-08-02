@@ -243,18 +243,18 @@ router.delete('/delete-document/:id', authenticateJWT, (req, res) => {
     });
 });
 
-// const videoStorage = multer.memoryStorage()
-const videoStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, '/tmp/uploads');
-    },
-    filename: (req, file, cb) => {
-        cb(null, path.extname(file.originalname));
-    }
-});
+const videoStorage = multer.memoryStorage()
+// const videoStorage = multer.diskStorage({
+//     destination: (req, file, cb) => {
+//         cb(null, '/tmp/uploads');
+//     },
+//     filename: (req, file, cb) => {
+//         cb(null, path.extname(file.originalname));
+//     }
+// });
 const uploadVideo = multer({ storage: videoStorage });
 
-const uploadVideoToFTP = async (localFilePath, fileName, retries = 3) => {
+const uploadVideoToFTP = async (fileName, retries = 3) => {
     const client = new ftp.Client();
     client.ftp.verbose = true;
 
@@ -269,16 +269,16 @@ const uploadVideoToFTP = async (localFilePath, fileName, retries = 3) => {
             }
         });
         await client.ensureDir("/");
-        // const readableStream = new Readable();
-        // readableStream._read = () => {}; // _read is required but you can noop it
-        // readableStream.push(file.buffer);
-        // readableStream.push(null);
-        await client.uploadFrom(localFilePath, `/${fileName}`);
+        const readableStream = new Readable();
+        readableStream._read = () => {}; // _read is required but you can noop it
+        readableStream.push(file.buffer);
+        readableStream.push(null);
+        await client.uploadFrom(readableStream, `/${fileName}`);
     }
     catch (err) {
         if (retries > 0) {
             console.error(`FTP upload failed, retrying... (${retries} retries left)`, err);
-            await uploadVideoToFTP(localFilePath, fileName, retries - 1); // Retry upload
+            await uploadVideoToFTP(fileName, retries - 1); // Retry upload
         } else {
             console.error('Failed to upload video to FTP after multiple attempts', err);
             throw err;
@@ -301,11 +301,9 @@ router.post('/upload-video-chunk', [authenticateJWT, uploadVideo.single('chunk')
         // const fileName = `${Date.now()}_${req.file.originalname}`;
         const localFilePath = path.join('/tmp/uploads', fileName);
 
-        fs.appendFileSync(localFilePath, fs.readFileSync(chunk.path));
-        fs.unlinkSync(chunk.path);
-
-        const fileStat = fs.statSync(localFilePath);
-        if (fileStat.size >= parseInt(start) + chunk.size) {
+        fs.appendFileSync(localFilePath, chunk.buffer);
+        
+        if (fs.statSync(localFilePath).size >= parseInt(start) + chunk.size) {
             await uploadVideoToFTP(localFilePath, fileName);
         }
         fs.unlinkSync(localFilePath);
