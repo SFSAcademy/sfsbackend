@@ -254,7 +254,7 @@ const videoStorage = multer.memoryStorage()
 // });
 const uploadVideo = multer({ storage: videoStorage });
 
-const uploadVideoToFTP = async (fileBuffer, fileName, retries = 3) => {
+const uploadVideoToFTP = async (fileBuffer, fileName, retries ) => {
     const client = new ftp.Client();
     client.ftp.verbose = true;
 
@@ -292,19 +292,19 @@ router.post('/upload-video-chunk', [authenticateJWT, uploadVideo.single('chunk')
     try {
         const { category, videoName, fileName, start } = req.body;
         const chunk = req.file;
-        const uploadDir = '/tmp/uploads';
+        const uploadDir = '/';
 
         // Ensure the directory exists
         if (!fs.existsSync(uploadDir)) {
             fs.mkdirSync(uploadDir, { recursive: true });
         }
         // const fileName = `${Date.now()}_${req.file.originalname}`;
-        const localFilePath = path.join('/tmp/uploads', fileName);
+        const localFilePath = path.join('/', fileName);
 
         fs.appendFileSync(localFilePath, chunk.buffer);
 
         if (fs.statSync(localFilePath).size === parseInt(req.headers['file-size'])) {
-            await uploadVideoToFTP(fs.readFileSync(localFilePath), fileName);
+            await uploadVideoToFTP(fs.readFileSync(localFilePath), fileName, retries = 3);
 
             fs.unlinkSync(localFilePath);
 
