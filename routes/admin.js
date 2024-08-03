@@ -254,7 +254,7 @@ const videoStorage = multer.memoryStorage()
 // });
 const uploadVideo = multer({ storage: videoStorage });
 
-const uploadDir = req.file.path;//path.join(__dirname, '..', 'uploads');;
+// const uploadDir = req.file.path;//path.join(__dirname, '..', 'uploads');;
 
 // Ensure the directory exists
 // if (!fs.existsSync(uploadDir)) {
@@ -299,6 +299,7 @@ router.post('/upload-video-chunk', [authenticateJWT, uploadVideo.single('chunk')
     try {
         const { category, videoName, fileName, start } = req.body;
         const chunk = req.file;
+        const uploadDir = req.file.path;
 
         // const fileName = `${Date.now()}_${req.file.originalname}`;
         const localFilePath = path.join(uploadDir, fileName);
