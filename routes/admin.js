@@ -302,8 +302,8 @@ router.post('/upload-video-chunk', [authenticateJWT, uploadVideo.single('chunk')
         const uploadDir = req.file.path;
 
         // const fileName = `${Date.now()}_${req.file.originalname}`;
-        const localFilePath = path.join(uploadDir, fileName);
-        // const localFilePath = req.file.path;
+        // const localFilePath = path.join(uploadDir, fileName);
+        const localFilePath = req.file.path;
 
         fs.appendFileSync(localFilePath, chunk.buffer);
 
