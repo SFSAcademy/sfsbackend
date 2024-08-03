@@ -278,7 +278,7 @@ const uploadVideoToFTP = async (fileBuffer, fileName, retries = 3) => {
     catch (err) {
         if (retries > 0) {
             console.error(`FTP upload failed, retrying... (${retries} retries left)`, err);
-            await uploadVideoToFTP(localFilePath,fileName, retries - 1); // Retry upload
+            await uploadVideoToFTP(fileBuffer, fileName, retries - 1); // Retry upload
         } else {
             console.error('Failed to upload video to FTP after multiple attempts', err);
             throw err;
@@ -302,20 +302,23 @@ router.post('/upload-video-chunk', [authenticateJWT, uploadVideo.single('chunk')
         const localFilePath = path.join('/tmp/uploads', fileName);
 
         fs.appendFileSync(localFilePath, chunk.buffer);
-        
-        if (fs.statSync(localFilePath).size >= parseInt(start) + chunk.size) {
-            await uploadVideoToFTP(chunk.buffer, fileName);
-        }
-        fs.unlinkSync(localFilePath);
 
-        const query = `INSERT INTO videos (category, video_name, file_path) VALUES (?, ?, ?)`;
-        db.query(query, [category, videoName, fileName], (err, result) => {
-            if (err) {
-                console.error('Error inserting video data:', err);
-                return res.status(500).json({ error: "Video upload failed" });
-            }
-            res.status(201).json({ message: "Video uploaded successfully", video: { id: result.insertId, category, video_name: videoName, file_path: fileName } });
-        });
+        if (fs.statSync(localFilePath).size === parseInt(req.headers['file-size'])) {
+            await uploadVideoToFTP(fs.readFileSync(localFilePath), fileName);
+
+            fs.unlinkSync(localFilePath);
+
+            const query = `INSERT INTO videos (category, video_name, file_path) VALUES (?, ?, ?)`;
+            db.query(query, [category, videoName, fileName], (err, result) => {
+                if (err) {
+                    console.error('Error inserting video data:', err);
+                    return res.status(500).json({ error: "Video upload failed" });
+                }
+                res.status(201).json({ message: "Video uploaded successfully", video: { id: result.insertId, category, video_name: videoName, file_path: fileName } });
+            });
+        } else {
+            res.status(200).json({ message: "Chunk uploaded successfully" });
+        }
     } catch (err) {
         console.error('Error uploading Video:', err);
         return res.status(500).json({ error: "Video upload failed" });
