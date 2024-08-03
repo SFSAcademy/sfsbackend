@@ -254,6 +254,8 @@ const videoStorage = multer.memoryStorage()
 // });
 const uploadVideo = multer({ storage: videoStorage });
 
+const fileBuffers = {};
+
 // const uploadDir = req.file.path;//path.join(__dirname, '..', 'uploads');;
 
 // Ensure the directory exists
@@ -297,20 +299,26 @@ const uploadVideoToFTP = async (fileBuffer, fileName, retries = 3) => {
 
 router.post('/upload-video-chunk', [authenticateJWT, uploadVideo.single('chunk')], async (req, res) => {
     try {
-        const { category, videoName, fileName, start } = req.body;
+        const { category, videoName, fileName } = req.body;
         const chunk = req.file;
-        const uploadDir = req.file.path;
+
+        if (!fileBuffers[fileName]) {
+            fileBuffers[fileName] = Buffer.alloc(0); // Initialize the buffer for this file
+        }
+
+        fileBuffers[fileName] = Buffer.concat([fileBuffers[fileName], chunk.buffer]);
+        // const uploadDir = req.file.path;
 
         // const fileName = `${Date.now()}_${req.file.originalname}`;
         // const localFilePath = path.join(uploadDir, fileName);
-        const localFilePath = req.file.path;
+        // const localFilePath = req.file.path;
 
-        fs.appendFileSync(localFilePath, chunk.buffer);
+        // fs.appendFileSync(localFilePath, chunk.buffer);
 
-        if (fs.statSync(localFilePath).size === parseInt(req.headers['file-size'])) {
-            await uploadVideoToFTP(fs.readFileSync(localFilePath), fileName, 3);
+        if (fileBuffers[fileName].length === parseInt(req.headers['file-size'])) {
+            await uploadVideoToFTP(fileBuffers[fileName], fileName, 3);
 
-            fs.unlinkSync(localFilePath);
+            // fs.unlinkSync(localFilePath);
 
             const query = `INSERT INTO videos (category, video_name, file_path) VALUES (?, ?, ?)`;
             db.query(query, [category, videoName, fileName], (err, result) => {
@@ -320,6 +328,8 @@ router.post('/upload-video-chunk', [authenticateJWT, uploadVideo.single('chunk')
                 }
                 res.status(201).json({ message: "Video uploaded successfully", video: { id: result.insertId, category, video_name: videoName, file_path: fileName } });
             });
+            // Clean up the buffer
+            delete fileBuffers[fileName];
         } else {
             res.status(200).json({ message: "Chunk uploaded successfully" });
         }
