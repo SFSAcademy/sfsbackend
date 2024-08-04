@@ -113,17 +113,19 @@ router.post('/remove-student', authenticateJWT, async (req, res) => {
     });
 });
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, '/tmp/uploads');
-    },
-    filename: (req, file, cb) => {
-        cb(null, path.extname(file.originalname));
-    }
-});
+
+const storage = multer.memoryStorage()
+// const storage = multer.diskStorage({
+//     destination: (req, file, cb) => {
+//         cb(null, '/tmp/uploads');
+//     },
+//     filename: (req, file, cb) => {
+//         cb(null, path.extname(file.originalname));
+//     }
+// });
 const upload = multer({ storage: storage });
 
-const uploadFileToFTP = async (localFilePath, fileName) => {
+const uploadFileToFTP = async (file, fileName) => {
     const client = new ftp.Client();
     client.ftp.verbose = true;
 
@@ -138,11 +140,11 @@ const uploadFileToFTP = async (localFilePath, fileName) => {
             }
         });
         await client.ensureDir("/");
-        // const readableStream = new Readable();
-        // readableStream._read = () => {}; // _read is required but you can noop it
-        // readableStream.push(file.buffer);
-        // readableStream.push(null);
-        await client.uploadFrom(localFilePath, `/${fileName}`);
+        const readableStream = new Readable();
+        readableStream._read = () => {}; // _read is required but you can noop it
+        readableStream.push(file.buffer);
+        readableStream.push(null);
+        await client.uploadFrom(readableStream, `/${fileName}`);
     }
     catch (err) {
         console.error(err);
@@ -153,10 +155,10 @@ const uploadFileToFTP = async (localFilePath, fileName) => {
 router.post('/upload', authenticateJWT, upload.single('document'), async (req, res) => {
     const { category, subcategory, documentName } = req.body;
     const fileName = `${Date.now()}_${req.file.originalname}`;
-    const localFilePath = req.file.path;
+    // const localFilePath = 'uploads/';
 
     try {
-        await uploadFileToFTP(localFilePath, fileName);
+        await uploadFileToFTP(req.file, fileName);
 
         const query = `INSERT INTO documents (category, subcategory, document_name, file_path) VALUES (?, ?, ?, ?)`;
         db.query(query, [category, subcategory, documentName, fileName], (err, result) => {
