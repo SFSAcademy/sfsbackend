@@ -117,7 +117,7 @@ router.post('/remove-student', authenticateJWT, async (req, res) => {
 const storage = multer.memoryStorage()
 // const storage = multer.diskStorage({
 //     destination: (req, file, cb) => {
-//         cb(null, '/tmp/uploads');
+//         cb(null, '/uploads');
 //     },
 //     filename: (req, file, cb) => {
 //         cb(null, path.extname(file.originalname));
@@ -171,14 +171,14 @@ router.post('/upload', authenticateJWT, upload.single('document'), async (req, r
     } catch (err) {
         console.error('Error uploading document:', err);
         return res.status(500).json({ error: "Document upload failed" });
-    } finally {
-        fs.unlink(localFilePath, (err) => {
-            if (err) {
-                console.error(`Failed to delete local file: ${localFilePath}`, err);
-            } else {
-                console.log(`Successfully deleted local file: ${localFilePath}`);
-            }
-        });
+    // } finally {
+    //     fs.unlink(localFilePath, (err) => {
+    //         if (err) {
+    //             console.error(`Failed to delete local file: ${localFilePath}`, err);
+    //         } else {
+    //             console.log(`Successfully deleted local file: ${localFilePath}`);
+    //         }
+    //     });
     }
 });
 
