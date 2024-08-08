@@ -20,7 +20,7 @@ router.post('/register', async (req, res) => {
     const { firstName, lastName, email, mobileNumber, password} = req.body;
 
     try {
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // const hashedPassword = await bcrypt.hash(password, 10);
     const currentDate = new Date();
 
     // if (password !== confirmPassword) {
@@ -28,7 +28,7 @@ router.post('/register', async (req, res) => {
     // }
 
     const query = `INSERT INTO newregstud (firstName, lastName, email, mobileNumber, password, registrationDate) VALUES (?, ?, ?, ?, ?, ?)`;
-    db.query(query, [firstName, lastName, email, mobileNumber, hashedPassword, currentDate], (err, result) => {
+    db.query(query, [firstName, lastName, email, mobileNumber, password, currentDate], (err, result) => {
         if (err) {
             console.error('Error inserting data:', err);
             res.status(500).json({ error: "Registration failed" });
@@ -53,8 +53,9 @@ router.post('/login', (req, res) => {
 
         const user = results[0];
 
-        const match = await bcrypt.compare(password, user.password);
-        if (match) {
+        // const match = await bcrypt.compare(password, user.password);
+        // if (match) {
+        if (password === user.password) {
             const token1 = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET_STUD, { expiresIn: '12h' });
             res.json({ success: true, token1 });
         } else {
@@ -114,10 +115,10 @@ router.post('/reset-password', async (req, res) => {
         }
 
         const user = results[0];
-        const hashedPassword = await bcrypt.hash(password, 10);
+        // const hashedPassword = await bcrypt.hash(password, 10);
         const updateQuery = 'UPDATE users SET password = ?, resetPasswordToken = NULL, resetPasswordExpires = NULL WHERE id = ?';
 
-        db.query(updateQuery, [hashedPassword, user.id], (updateErr) => {
+        db.query(updateQuery, [password, user.id], (updateErr) => {
             if (updateErr) {
                 return res.status(500).json({ success: false, message: 'Error updating password.' });
             }
